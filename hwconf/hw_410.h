@@ -67,6 +67,7 @@
 #define ADC_IND_TEMP_MOS6			5
 #define ADC_IND_TEMP_PCB			5
 #define ADC_IND_VREFINT				6
+#define ADC_IND_TEMP_MOT			11
 
 // ADC macros and settings
 

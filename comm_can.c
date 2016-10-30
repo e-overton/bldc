@@ -35,6 +35,8 @@
 #include "app.h"
 #include "crc.h"
 #include "packet.h"
+#include "hw.h"
+#include "math.h"
 
 // Settings
 #define CANDx			CAND1
@@ -59,6 +61,8 @@ static int rx_frame_read;
 static int rx_frame_write;
 static thread_t *process_tp;
 
+static int canstatus_decimator;
+
 /*
  * 500KBaud, automatic wakeup, automatic recover
  * from abort mode.
@@ -80,6 +84,7 @@ void comm_can_init(void) {
 
 	rx_frame_read = 0;
 	rx_frame_write = 0;
+  canstatus_decimator = 0;
 
 	chMtxObjectInit(&can_mtx);
 
@@ -255,7 +260,7 @@ static THD_FUNCTION(cancom_process_thread, arg) {
 							stat_tmp->id = id;
 							stat_tmp->rx_time = chVTGetSystemTime();
 							stat_tmp->rpm = (float)buffer_get_int32(rxmsg.data8, &ind);
-							stat_tmp->current = (float)buffer_get_int16(rxmsg.data8, &ind) / 10.0;
+							stat_tmp->current = (float)buffer_get_int16(rxmsg.data8, &ind) / 100.0;
 							stat_tmp->duty = (float)buffer_get_int16(rxmsg.data8, &ind) / 1000.0;
 							break;
 						}
@@ -283,10 +288,33 @@ static THD_FUNCTION(cancom_status_thread, arg) {
 			// Send status message
 			int32_t send_index = 0;
 			uint8_t buffer[8];
-			buffer_append_int32(buffer, (int32_t)mc_interface_get_rpm(), &send_index);
-			buffer_append_int16(buffer, (int16_t)(mc_interface_get_tot_current() * 10.0), &send_index);
-			buffer_append_int16(buffer, (int16_t)(mc_interface_get_duty_cycle_now() * 1000.0), &send_index);
+			buffer_append_int32(buffer, (int32_t)mc_interface_get_rpm(), &send_index); // RPM 
+			buffer_append_int16(buffer, (int16_t)(mc_interface_get_tot_current() * 100.0), &send_index); //Voltage
+			buffer_append_int16(buffer, (int16_t)(mc_interface_get_duty_cycle_now() * 1000.0), &send_index); //Duty cycle
 			comm_can_transmit(app_get_configuration()->controller_id | ((uint32_t)CAN_PACKET_STATUS << 8), buffer, send_index);
+
+			// Send extended status message:
+			// CAN_PACKET_STATUS2, decimated factor of 5, arrives at 10Hz.
+			if (canstatus_decimator % 5 == 0)
+			{
+				send_index = 0;
+				buffer_append_uint16(buffer, (int16_t)(mc_interface_read_reset_avg_input_current()*100.), &send_index);
+				buffer_append_uint16(buffer, (uint16_t)(GET_INPUT_VOLTAGE() * 1000.0), &send_index);
+				buffer_append_uint32(buffer, (uint32_t)(ST2MS(chVTGetSystemTime())), &send_index);
+				comm_can_transmit(app_get_configuration()->controller_id | ((uint32_t)CAN_PACKET_STATUS2 << 8), buffer, send_index);
+			}
+			// CAN_PACKET_STATUS3
+			if (canstatus_decimator % 25 == 0)
+			{
+				send_index = 0;
+				buffer_append_uint16(buffer, (uint16_t)(NTC_TEMP(ADC_IND_TEMP_MOS1) * 100.0), &send_index);
+				buffer_append_uint16(buffer, (uint16_t)(NTC_TEMP(ADC_IND_TEMP_MOT) * 100.0), &send_index);
+				buffer[send_index] = (uint8_t)(mc_interface_get_fault()); send_index++;
+				comm_can_transmit(app_get_configuration()->controller_id | ((uint32_t)CAN_PACKET_STATUS3 << 8), buffer, send_index);
+				canstatus_decimator = 0;
+			}
+      canstatus_decimator++;
+
 		}
 
 		systime_t sleep_time = CH_CFG_ST_FREQUENCY / app_get_configuration()->send_can_status_rate_hz;

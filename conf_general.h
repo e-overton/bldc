@@ -27,7 +27,7 @@
 
 // Firmware version
 #define FW_VERSION_MAJOR	2
-#define FW_VERSION_MINOR	18
+#define FW_VERSION_MINOR	28 //+10 = custom bldc version
 
 #include "datatypes.h"
 

@@ -67,7 +67,7 @@
 #define ADC_IND_TEMP_MOS6			9
 #define ADC_IND_TEMP_PCB			9
 #define ADC_IND_VREFINT				6
-
+#define ADC_IND_TEMP_MOT                        11
 // ADC macros and settings
 
 // Component parameters (can be overridden)
