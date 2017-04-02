@@ -99,7 +99,7 @@
 #define NTC_RES(adc_val)	((4095.0 * 10000.0) / adc_val - 10000.0)
 #define NTC_TEMP(adc_ind)	(1.0 / ((logf(NTC_RES(ADC_Value[adc_ind]) / 10000.0) / 3434.0) + (1.0 / 298.15)) - 273.15)
 
-#define MOT_RES(adc_val)	(10000.0*(4096.0-(float)adc_val)/(float)adc_val)
+#define MOT_RES(adc_val)	(10000.0/(4096.0-(float)adc_val)*(float)adc_val)
 #define MOT_TEMP(adc_ind)	(1.0 / ((logf(MOT_RES(ADC_Value[adc_ind]) / 10000.0) / 3434.0) + (1.0 / 298.15)) - 273.15)
 
 // Double samples in beginning and end for positive current measurement.
