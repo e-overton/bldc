@@ -308,7 +308,7 @@ static THD_FUNCTION(cancom_status_thread, arg) {
 			{
 				send_index = 0;
 				buffer_append_uint16(buffer, (uint16_t)(NTC_TEMP(ADC_IND_TEMP_MOS1) * 100.0), &send_index);
-				buffer_append_uint16(buffer, (uint16_t)(NTC_TEMP(ADC_IND_TEMP_MOT) * 100.0), &send_index);
+				buffer_append_uint16(buffer, (uint16_t)(MOT_TEMP(ADC_IND_TEMP_MOT) * 100.0), &send_index);
 				buffer[send_index] = (uint8_t)(mc_interface_get_fault()); send_index++;
 				comm_can_transmit(app_get_configuration()->controller_id | ((uint32_t)CAN_PACKET_STATUS3 << 8), buffer, send_index);
 				canstatus_decimator = 0;
